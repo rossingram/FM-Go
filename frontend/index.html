@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FM-Go Radio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .section {
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .section:last-child {
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Player Section */
+        .player {
+            text-align: center;
+        }
+
+        .frequency-display {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .station-name {
+            font-size: 1.2em;
+            color: #666;
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .station-name:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .station-name.editing {
+            border: 2px solid #667eea;
+            background: white;
+        }
+
+        .station-name input {
+            width: 100%;
+            border: none;
+            font-size: 1em;
+            text-align: center;
+            outline: none;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .volume-control input[type="range"] {
+            flex: 1;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .volume-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .volume-control input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+
+        .tune-control {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .tune-control input[type="number"] {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1em;
+            width: 200px;
+            text-align: center;
+        }
+
+        .tune-control input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Presets Section */
+        .presets-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .preset-card {
+            background: #f8f9ff;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .preset-card:hover {
+            border-color: #667eea;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .preset-card.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        .preset-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .preset-frequency {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .preset-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .preset-actions button {
+            padding: 5px 10px;
+            font-size: 0.8em;
+        }
+
+        .add-preset-form {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 12px;
+        }
+
+        .add-preset-form input {
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            margin: 5px;
+            width: calc(50% - 10px);
+        }
+
+        /* Status Section */
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .status-card {
+            background: #f8f9ff;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .status-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .status-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .status-value.success {
+            color: #27ae60;
+        }
+
+        .status-value.error {
+            color: #e74c3c;
+        }
+
+        .audio-player {
+            display: none;
+        }
+
+        /* Loading spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            .frequency-display {
+                font-size: 2em;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+
+            .tune-control input[type="number"] {
+                width: 100%;
+            }
+
+            .add-preset-form input {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎧 FM-Go</h1>
+            <p>Raspberry Pi FM Radio Receiver</p>
+        </header>
+
+        <!-- Player Section -->
+        <div class="section player">
+            <div class="section-title">🎧 Player</div>
+            
+            <div class="frequency-display" id="frequencyDisplay">--</div>
+            
+            <div class="station-name" id="stationName">
+                <span id="stationNameText">Loading...</span>
+            </div>
+
+            <div class="controls">
+                <button class="btn btn-primary" id="playBtn" onclick="togglePlay()">
+                    ▶ Play
+                </button>
+                <button class="btn btn-secondary" id="stopBtn" onclick="stop()">
+                    ⏹ Stop
+                </button>
+            </div>
+
+            <div class="tune-control">
+                <label>Frequency (Hz):</label>
+                <input type="number" id="frequencyInput" min="87500000" max="108000000" step="100000" value="101500000">
+                <button class="btn btn-primary" onclick="tune()">Tune</button>
+            </div>
+
+            <div class="volume-control">
+                <span>🔊</span>
+                <input type="range" id="volumeSlider" min="0" max="100" value="75" oninput="setVolume(this.value)">
+                <span id="volumeValue">75%</span>
+            </div>
+
+            <audio id="audioPlayer" class="audio-player" controls autoplay>
+                <source id="audioSource" src="/api/stream" type="audio/mpeg">
+            </audio>
+        </div>
+
+        <!-- Presets Section -->
+        <div class="section">
+            <div class="section-title">📻 Station Presets</div>
+            
+            <div class="presets-list" id="presetsList">
+                <!-- Presets will be loaded here -->
+            </div>
+
+            <div class="add-preset-form">
+                <input type="text" id="newPresetName" placeholder="Station Name">
+                <input type="number" id="newPresetFreq" placeholder="Frequency (Hz)" min="87500000" max="108000000" step="100000">
+                <button class="btn btn-primary" onclick="addPreset()" style="width: 100%; margin-top: 10px;">
+                    ➕ Add Preset
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Section -->
+        <div class="section">
+            <div class="section-title">⚙️ Status</div>
+            
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-label">RTL-SDR</div>
+                    <div class="status-value" id="rtlStatus">Checking...</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">Stream Status</div>
+                    <div class="status-value" id="streamStatus">Checking...</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-label">CPU Temperature</div>
+                    <div class="status-value" id="cpuTemp">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        let currentFrequency = 101500000;
+        let isPlaying = false;
+        let currentPresetId = null;
+
+        const audioPlayer = document.getElementById('audioPlayer');
+        const frequencyDisplay = document.getElementById('frequencyDisplay');
+        const frequencyInput = document.getElementById('frequencyInput');
+        const stationNameText = document.getElementById('stationNameText');
+        const stationName = document.getElementById('stationName');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeValue = document.getElementById('volumeValue');
+
+        // Initialize
+        async function init() {
+            await loadStatus();
+            await loadPresets();
+            await loadConfig();
+            
+            // Set up station name editing
+            stationName.addEventListener('click', () => {
+                if (!stationName.classList.contains('editing')) {
+                    startEditingStationName();
+                }
+            });
+
+            // Update audio source when playing
+            audioPlayer.addEventListener('play', () => {
+                updateAudioSource();
+            });
+
+            // Auto-refresh status
+            setInterval(loadStatus, 5000);
+        }
+
+        async function loadStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/status`);
+                const status = await response.json();
+                
+                // Update RTL-SDR status
+                const rtlStatus = document.getElementById('rtlStatus');
+                if (status.rtl_sdr_detected) {
+                    rtlStatus.textContent = '✅ Detected';
+                    rtlStatus.className = 'status-value success';
+                } else {
+                    rtlStatus.textContent = '❌ Not Found';
+                    rtlStatus.className = 'status-value error';
+                }
+
+                // Update stream status
+                const streamStatus = document.getElementById('streamStatus');
+                if (status.is_playing) {
+                    streamStatus.textContent = '▶ Playing';
+                    streamStatus.className = 'status-value success';
+                    isPlaying = true;
+                    playBtn.textContent = '⏸ Pause';
+                } else {
+                    streamStatus.textContent = '⏹ Stopped';
+                    streamStatus.className = 'status-value';
+                    isPlaying = false;
+                    playBtn.textContent = '▶ Play';
+                }
+
+                // Update frequency
+                if (status.current_frequency) {
+                    currentFrequency = status.current_frequency;
+                    frequencyDisplay.textContent = formatFrequency(currentFrequency);
+                    frequencyInput.value = currentFrequency;
+                }
+
+                // Update CPU temperature
+                const cpuTemp = document.getElementById('cpuTemp');
+                if (status.cpu_temperature !== null) {
+                    cpuTemp.textContent = `${status.cpu_temperature}°C`;
+                } else {
+                    cpuTemp.textContent = 'N/A';
+                }
+            } catch (error) {
+                console.error('Error loading status:', error);
+            }
+        }
+
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/api/config`);
+                const config = await response.json();
+                currentFrequency = config.frequency || 101500000;
+                frequencyInput.value = currentFrequency;
+                frequencyDisplay.textContent = formatFrequency(currentFrequency);
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        async function loadPresets() {
+            try {
+                const response = await fetch(`${API_BASE}/api/presets`);
+                const data = await response.json();
+                renderPresets(data.presets);
+            } catch (error) {
+                console.error('Error loading presets:', error);
+            }
+        }
+
+        function renderPresets(presets) {
+            const presetsList = document.getElementById('presetsList');
+            presetsList.innerHTML = '';
+            
+            presets.forEach(preset => {
+                const card = document.createElement('div');
+                card.className = 'preset-card';
+                if (preset.frequency === currentFrequency) {
+                    card.classList.add('active');
+                }
+                
+                card.innerHTML = `
+                    <div class="preset-name">${preset.name}</div>
+                    <div class="preset-frequency">${formatFrequency(preset.frequency)}</div>
+                    <div class="preset-actions">
+                        <button class="btn btn-primary" onclick="tuneToPreset(${preset.frequency})">Tune</button>
+                        <button class="btn btn-secondary" onclick="editPreset(${preset.id})">Edit</button>
+                        <button class="btn btn-danger" onclick="deletePreset(${preset.id})">Delete</button>
+                    </div>
+                `;
+                
+                presetsList.appendChild(card);
+            });
+        }
+
+        async function togglePlay() {
+            if (isPlaying) {
+                await stop();
+            } else {
+                await play();
+            }
+        }
+
+        async function play() {
+            try {
+                const response = await fetch(`${API_BASE}/api/play`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({frequency: currentFrequency})
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    isPlaying = true;
+                    playBtn.textContent = '⏸ Pause';
+                    updateAudioSource();
+                    await loadStatus();
+                } else {
+                    alert('Failed to start playback: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error starting playback:', error);
+                alert('Failed to start playback');
+            }
+        }
+
+        async function stop() {
+            try {
+                const response = await fetch(`${API_BASE}/api/stop`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    isPlaying = false;
+                    playBtn.textContent = '▶ Play';
+                    audioPlayer.pause();
+                    await loadStatus();
+                }
+            } catch (error) {
+                console.error('Error stopping playback:', error);
+            }
+        }
+
+        async function tune() {
+            const frequency = parseInt(frequencyInput.value);
+            if (frequency < 87500000 || frequency > 108000000) {
+                alert('Frequency must be between 87.5 MHz and 108 MHz');
+                return;
+            }
+            
+            currentFrequency = frequency;
+            await tuneToFrequency(frequency);
+        }
+
+        async function tuneToFrequency(frequency) {
+            try {
+                const response = await fetch(`${API_BASE}/api/tune`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({frequency: frequency})
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    currentFrequency = frequency;
+                    frequencyDisplay.textContent = formatFrequency(frequency);
+                    frequencyInput.value = frequency;
+                    await loadPresets();
+                    if (isPlaying) {
+                        updateAudioSource();
+                    }
+                } else {
+                    alert('Failed to tune: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error tuning:', error);
+                alert('Failed to tune');
+            }
+        }
+
+        async function tuneToPreset(frequency) {
+            frequencyInput.value = frequency;
+            await tuneToFrequency(frequency);
+        }
+
+        async function addPreset() {
+            const name = document.getElementById('newPresetName').value.trim();
+            const freq = parseInt(document.getElementById('newPresetFreq').value);
+            
+            if (!name) {
+                alert('Please enter a station name');
+                return;
+            }
+            
+            if (!freq || freq < 87500000 || freq > 108000000) {
+                alert('Please enter a valid frequency (87.5-108 MHz)');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/presets`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name: name, frequency: freq})
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('newPresetName').value = '';
+                    document.getElementById('newPresetFreq').value = '';
+                    await loadPresets();
+                } else {
+                    alert('Failed to add preset: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error adding preset:', error);
+                alert('Failed to add preset');
+            }
+        }
+
+        async function editPreset(id) {
+            const name = prompt('Enter new station name:');
+            if (!name) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/presets/${id}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name: name})
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    await loadPresets();
+                } else {
+                    alert('Failed to update preset');
+                }
+            } catch (error) {
+                console.error('Error updating preset:', error);
+                alert('Failed to update preset');
+            }
+        }
+
+        async function deletePreset(id) {
+            if (!confirm('Delete this preset?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/presets/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    await loadPresets();
+                } else {
+                    alert('Failed to delete preset');
+                }
+            } catch (error) {
+                console.error('Error deleting preset:', error);
+                alert('Failed to delete preset');
+            }
+        }
+
+        function setVolume(value) {
+            volumeValue.textContent = value + '%';
+            audioPlayer.volume = value / 100;
+        }
+
+        function formatFrequency(hz) {
+            return (hz / 1000000).toFixed(1) + ' MHz';
+        }
+
+        function updateAudioSource() {
+            // Add timestamp to prevent caching
+            const source = document.getElementById('audioSource');
+            source.src = `${API_BASE}/api/stream?t=${Date.now()}`;
+            audioPlayer.load();
+            audioPlayer.play().catch(e => console.error('Play error:', e));
+        }
+
+        function startEditingStationName() {
+            stationName.classList.add('editing');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = stationNameText.textContent;
+            input.addEventListener('blur', () => {
+                stationNameText.textContent = input.value;
+                stationName.classList.remove('editing');
+            });
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    input.blur();
+                }
+            });
+            stationName.innerHTML = '';
+            stationName.appendChild(input);
+            input.focus();
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
