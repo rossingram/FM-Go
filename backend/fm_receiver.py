@@ -145,14 +145,29 @@ def save_presets():
 def detect_rtl_sdr():
     """Detect if RTL-SDR is available"""
     try:
+        # Try without sudo first
         result = subprocess.run(
             ['rtl_test', '-t'],
             capture_output=True,
-            timeout=2,
+            timeout=3,
             text=True
         )
-        return 'Found' in result.stdout or 'No supported' not in result.stdout
-    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        output = result.stdout + result.stderr
+        # Check for successful detection patterns
+        if 'Found' in output or 'No supported' not in output:
+            return True
+        
+        # If that didn't work, try with sudo (for permission issues)
+        result = subprocess.run(
+            ['sudo', 'rtl_test', '-t'],
+            capture_output=True,
+            timeout=3,
+            text=True
+        )
+        output = result.stdout + result.stderr
+        return 'Found' in output or ('No supported' not in output and 'No device' not in output)
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError) as e:
+        logger.debug(f"RTL-SDR detection error: {e}")
         return False
 
 
