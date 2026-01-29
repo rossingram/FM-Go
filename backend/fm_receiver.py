@@ -225,7 +225,7 @@ def start_streaming(frequency=None):
         time.sleep(0.5)
     
     if not detect_rtl_sdr():
-        logger.error("RTL-SDR not detected")
+        logger.error("RTL-SDR not detected - check if device is plugged in and drivers are not conflicting")
         return False
     
     try:
@@ -463,10 +463,20 @@ def api_play():
     """Start playing"""
     frequency = request.json.get('frequency') or config.get('frequency', 101500000)
     
+    # Check if RTL-SDR is available first
+    if not detect_rtl_sdr():
+        return jsonify({
+            "success": False, 
+            "error": "RTL-SDR not detected. Please ensure the device is plugged in and drivers are not conflicting."
+        }), 503
+    
     if start_streaming(frequency):
         return jsonify({"success": True})
     else:
-        return jsonify({"success": False, "error": "Failed to start stream"}), 500
+        return jsonify({
+            "success": False, 
+            "error": "Failed to start stream. Check logs for details."
+        }), 500
 
 
 @app.route('/api/stop', methods=['POST'])

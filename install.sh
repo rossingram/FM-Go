@@ -66,6 +66,21 @@ if ! id "$SERVICE_USER" &>/dev/null; then
     useradd -r -s /bin/false "$SERVICE_USER" || true
 fi
 
+# Add service user to groups for USB device access
+echo "👤 Configuring USB permissions..."
+usermod -a -G plugdev "$SERVICE_USER" 2>/dev/null || true
+usermod -a -G dialout "$SERVICE_USER" 2>/dev/null || true
+
+# Create udev rules for RTL-SDR
+echo "📝 Creating udev rules for RTL-SDR..."
+cat > /etc/udev/rules.d/20-rtl-sdr.rules <<'UDEVEOF'
+# RTL-SDR dongles
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", GROUP="plugdev", MODE="0666", SYMLINK+="rtl_sdr"
+SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2832", GROUP="plugdev", MODE="0666", SYMLINK+="rtl_sdr"
+UDEVEOF
+udevadm control --reload-rules 2>/dev/null || true
+udevadm trigger 2>/dev/null || true
+
 # Create installation directory
 echo "📁 Creating installation directory..."
 mkdir -p "$INSTALL_DIR"
