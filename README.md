@@ -32,6 +32,9 @@ sudo ./install.sh
 ## Requirements
 
 - Raspberry Pi (3B+, 4, or 5)
+- **Official Raspberry Pi power supply** (5V 2.5A+ for Pi 3B+, 5V 3A+ for Pi 4)
+  - ⚠️ **Critical**: Undervoltage will cause USB devices to disconnect
+  - Use the official power supply or a high-quality equivalent
 - RTL-SDR dongle
 - Network connection (Ethernet or Wi-Fi)
 - microSD card

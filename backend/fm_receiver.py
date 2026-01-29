@@ -143,14 +143,14 @@ def save_presets():
 
 
 def detect_rtl_sdr():
-    """Detect if RTL-SDR is available"""
+    """Detect if RTL-SDR is available - lightweight check to avoid disconnects"""
     try:
-        # First check if device exists in USB
+        # Quick USB check first (non-intrusive)
         try:
             usb_check = subprocess.run(
                 ['lsusb'],
                 capture_output=True,
-                timeout=2,
+                timeout=1,
                 text=True
             )
             if '0bda:283' not in usb_check.stdout and 'RTL283' not in usb_check.stdout:
@@ -159,11 +159,12 @@ def detect_rtl_sdr():
         except:
             pass  # Continue even if lsusb fails
         
-        # Now test with rtl_test
+        # Use rtl_test with shorter timeout and minimal operations
+        # The -t flag does a quick test without heavy operations
         result = subprocess.run(
             ['rtl_test', '-t'],
             capture_output=True,
-            timeout=5
+            timeout=3  # Shorter timeout to avoid hanging
         )
         
         # Decode with error handling for non-UTF-8 output
@@ -173,7 +174,7 @@ def detect_rtl_sdr():
             # Fallback: try latin-1 or ignore errors
             output = result.stdout.decode('latin-1', errors='replace') + result.stderr.decode('latin-1', errors='replace')
         
-        # Check for successful detection - device found AND can communicate
+        # Check for successful detection - device found
         # Look for "Found X device(s)" - this indicates device is present
         if 'Found' in output and 'device' in output.lower():
             # Check if we can actually communicate with it (tuner found or gain values)
@@ -181,9 +182,10 @@ def detect_rtl_sdr():
                 logger.info("RTL-SDR detected and tuner accessible")
                 return True
             # If device found but communication fails, it might be disconnecting
-            if 'No supported tuner' in output or 'Failed to set' in output:
-                logger.warning("RTL-SDR device found but cannot communicate - may be disconnecting or have power issues")
-                return False
+            # But still return True if device is found - let streaming attempt handle errors
+            if 'No supported tuner' in output:
+                logger.warning("RTL-SDR device found but tuner not supported - may still work")
+                return True  # Return True anyway - device exists
             # If device found but no clear tuner info, still try (might work)
             logger.info("RTL-SDR device found (tuner status unclear)")
             return True
@@ -194,7 +196,7 @@ def detect_rtl_sdr():
         logger.error("rtl_test command not found. Is rtl-sdr package installed?")
         return False
     except subprocess.TimeoutExpired:
-        logger.warning("RTL-SDR detection timed out - device may be unresponsive")
+        logger.warning("RTL-SDR detection timed out - device may be unresponsive or disconnecting")
         return False
     except Exception as e:
         logger.error(f"RTL-SDR detection error: {e}")
@@ -569,15 +571,13 @@ def main():
     load_config()
     load_presets()
     
-    # Check for RTL-SDR
-    if not detect_rtl_sdr():
+    # Check for RTL-SDR (but don't start streaming automatically)
+    # Let user start streaming via web interface to avoid disconnects
+    if detect_rtl_sdr():
+        logger.info("RTL-SDR detected. Use web interface to start streaming.")
+    else:
         logger.warning("RTL-SDR not detected. Service will start but streaming may fail.")
         logger.info("Plug in RTL-SDR and use the web interface to start streaming.")
-    else:
-        # Try to start streaming at default frequency (non-blocking if it fails)
-        logger.info("Attempting to start streaming at default frequency...")
-        if not start_streaming():
-            logger.warning("Failed to start streaming. Use web interface to start manually.")
     
     # Start Flask server
     port = config.get('port', 8080)
