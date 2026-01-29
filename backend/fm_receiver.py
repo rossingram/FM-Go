@@ -149,23 +149,26 @@ def detect_rtl_sdr():
         result = subprocess.run(
             ['rtl_test', '-t'],
             capture_output=True,
-            timeout=3,
+            timeout=5,
             text=True
         )
         output = result.stdout + result.stderr
-        # Check for successful detection patterns
-        if 'Found' in output or 'No supported' not in output:
+        
+        # If "Found" appears, device is detected (even if there are errors)
+        if 'Found' in output and 'device' in output.lower():
+            # Device found, but may have initialization errors
+            # This is still considered "detected" - errors will show when trying to use it
             return True
         
         # If that didn't work, try with sudo (for permission issues)
         result = subprocess.run(
             ['sudo', 'rtl_test', '-t'],
             capture_output=True,
-            timeout=3,
+            timeout=5,
             text=True
         )
         output = result.stdout + result.stderr
-        return 'Found' in output or ('No supported' not in output and 'No device' not in output)
+        return 'Found' in output and 'device' in output.lower()
     except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError) as e:
         logger.debug(f"RTL-SDR detection error: {e}")
         return False
