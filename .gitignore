@@ -25,3 +25,4 @@ wheels/
 *.log
 config.json
 presets.json
+COMMIT_MSG

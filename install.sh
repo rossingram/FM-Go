@@ -149,7 +149,7 @@ echo "⚙️  Creating default configuration..."
 cat > "$INSTALL_DIR/config/config.json" <<EOF
 {
     "port": $PORT,
-    "sample_rate": 240000,
+    "sample_rate": 170000,
     "frequency": 101500000,
     "gain": 0,
     "audio_format": "mp3",

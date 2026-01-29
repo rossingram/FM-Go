@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to FM-Go!
 
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for project layout and GitHub workflow.
+
 ## Development Setup
 
 1. Clone the repository

@@ -1,18 +1,18 @@
 # FM-Go 🎧
 
-A plug-and-play Raspberry Pi FM radio receiver that turns a Pi into a headless, always-on network radio, accessible through a simple web interface.
+A plug-and-play Raspberry Pi FM radio receiver. Turn a Pi into a headless, always-on network radio with a simple web interface.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Quick Start
 
-### One-Command Installation
+**One-command install:**
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/rossingram/FM-Go/main/install.sh | sudo bash
 ```
 
-### Manual Installation
+**Or from repo:**
 
 ```bash
 git clone https://github.com/rossingram/FM-Go.git
@@ -20,47 +20,30 @@ cd FM-Go
 sudo ./install.sh
 ```
 
-## Features
-
-- 🎧 One-command installation
-- 📻 Automatic RTL-SDR hardware detection
-- 🌐 Simple web interface accessible from any device on your LAN
-- 🔄 Always-on operation with systemd
-- 📡 FM broadcast radio reception
-- 💾 Station presets management
+Then open **http://\<pi-ip\>:8080** in a browser. Plug in your RTL-SDR and tap **Play**.
 
 ## Requirements
 
 - Raspberry Pi (3B+, 4, or 5)
-- **Official Raspberry Pi power supply** (5V 2.5A+ for Pi 3B+, 5V 3A+ for Pi 4)
-  - ⚠️ **Critical**: Undervoltage will cause USB devices to disconnect
-  - Use the official power supply or a high-quality equivalent
+- Official Pi power supply (5V 2.5A+ for Pi 3B+, 5V 3A+ for Pi 4)
 - RTL-SDR dongle
-- Network connection (Ethernet or Wi-Fi)
+- Network (Ethernet or Wi‑Fi)
 - microSD card
 
-## Architecture
+## Features
 
-- **Backend**: Python service using RTL-SDR for FM demodulation
-- **Streaming**: HTTP audio stream (MP3)
-- **Frontend**: Lightweight HTML/CSS/JS web interface
-- **Service**: systemd-managed for auto-start on boot
+- One-command installation
+- Web UI: play/pause, volume, frequency, presets
+- RTL-SDR detection (non-intrusive; device opened only when streaming)
+- Default low gain to avoid overload (e.g. with high-gain antenna)
+- systemd service, starts on boot
 
-## Web Interface
+## Docs
 
-Access the web interface at `http://<pi-ip>:8080` after installation.
-
-Features:
-- Play/Pause controls
-- Volume control
-- Station frequency tuning
-- Preset management
-- System status display
-
-## Development
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and contribution guidelines.
+- [Installation](docs/INSTALL.md) – install options and what the installer does
+- [Troubleshooting](docs/TROUBLESHOOTING.md) – SDR not detected, drops when playing, service issues
+- [Development](docs/DEVELOPMENT.md) – project layout, local run, pushing to GitHub
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT – see [LICENSE](LICENSE).

@@ -72,7 +72,7 @@ def load_config():
     global config
     default_config = {
         "port": 8080,
-        "sample_rate": 240000,
+        "sample_rate": 170000,  # Standard for FM; lower USB load than 240k
         "frequency": 101500000,
         "gain": 0,  # Low gain by default to prevent overload (e.g. with high-gain antenna)
         "audio_format": "mp3",
@@ -246,14 +246,18 @@ def start_streaming(frequency=None, gain_override=None):
         # Give processes time to clean up
         time.sleep(0.5)
     
-    if not detect_rtl_sdr():
-        logger.error("RTL-SDR not detected - check if device is plugged in, powered, and drivers are not conflicting")
-        logger.error("Common issues: USB power problems, device disconnecting, or driver conflicts")
+    # Use lsusb-only check so we don't open the device with rtl_test before rtl_fm (one open = less chance of dropout)
+    if not is_rtl_sdr_present():
+        logger.error("RTL-SDR not present (USB). Plug in the device.")
         return False
+    
+    # Brief delay before opening device - can help if SDR drops when opened immediately
+    time.sleep(1.5)
     
     try:
         global _first_stream_this_session
-        sample_rate = config.get('sample_rate', 240000)
+        # 170k is standard for FM; lower can reduce USB load but may hurt audio
+        sample_rate = config.get('sample_rate', 170000)
         gain = gain_override if gain_override is not None else config.get('gain', 0)
         audio_bitrate = config.get('audio_bitrate', 128)
         
@@ -335,6 +339,8 @@ def start_streaming(frequency=None, gain_override=None):
         
         sox_process.stdout.close()
         
+        global _stream_died_logged
+        _stream_died_logged = False
         is_playing = True
         logger.info("Stream started successfully")
         return True
@@ -499,11 +505,11 @@ def api_play():
     frequency = data.get('frequency') or config.get('frequency', 101500000)
     gain = data.get('gain')  # None = use config; number or 'auto' to override
     
-    # Check if RTL-SDR is available first
-    if not detect_rtl_sdr():
+    # Use lsusb-only check so we don't open the device with rtl_test before rtl_fm (one open = less dropout)
+    if not is_rtl_sdr_present():
         return jsonify({
             "success": False, 
-            "error": "RTL-SDR not detected. Please ensure the device is plugged in and drivers are not conflicting."
+            "error": "RTL-SDR not present. Plug in the device and try again."
         }), 503
     
     if start_streaming(frequency, gain_override=gain):
@@ -522,31 +528,40 @@ def api_stop():
     return jsonify({"success": True})
 
 
+_stream_died_logged = False
+
+
 @app.route('/api/stream')
 def api_stream():
     """Audio stream endpoint"""
+    global _stream_died_logged
     if not is_playing or not audio_process:
         return Response("Stream not active", status=503, mimetype='text/plain')
     
     def generate():
+        global _stream_died_logged
         try:
             while is_playing and audio_process:
                 if audio_process.poll() is not None:
-                    # Process died
-                    logger.error("Audio process terminated unexpectedly")
+                    if not _stream_died_logged:
+                        _stream_died_logged = True
+                        logger.error("Audio process terminated unexpectedly (SDR may have disconnected)")
+                    stop_streaming()
                     break
                 
                 chunk = audio_process.stdout.read(8192)
                 if not chunk:
-                    # Check if process is still alive
                     if audio_process.poll() is not None:
+                        if not _stream_died_logged:
+                            _stream_died_logged = True
+                            logger.error("Audio process terminated unexpectedly (SDR may have disconnected)")
+                        stop_streaming()
                         break
                     time.sleep(0.1)
                     continue
                 yield chunk
         except GeneratorExit:
-            # Client disconnected, this is normal
-            logger.debug("Client disconnected from stream")
+            pass
         except Exception as e:
             logger.error(f"Stream error: {e}")
     
