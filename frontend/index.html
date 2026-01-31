@@ -75,33 +75,30 @@
             font-variant-numeric: tabular-nums;
         }
 
-        .station-name {
-            font-size: 1em;
+        .rds-display {
+            font-size: 0.95em;
             color: #888;
             margin-bottom: 16px;
             padding: 8px 12px;
             border: 1px solid #404040;
             border-radius: 6px;
-            cursor: pointer;
-            transition: border-color 0.2s;
+            min-height: 2.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5em;
         }
 
-        .station-name:hover {
-            border-color: #555;
+        .rds-display .rds-label {
+            font-size: 0.8em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .station-name.editing {
-            border-color: #666;
-        }
-
-        .station-name input {
-            width: 100%;
-            border: none;
-            background: transparent;
-            font-size: 1em;
-            color: #e0e0e0;
-            text-align: center;
-            outline: none;
+        .rds-display .rds-text {
+            color: #b0b0b0;
         }
 
         .controls {
@@ -372,8 +369,9 @@
             
             <div class="frequency-display" id="frequencyDisplay">--</div>
             
-            <div class="station-name" id="stationName">
-                <span id="stationNameText">—</span>
+            <div class="rds-display" id="rdsDisplay" title="RDS: station name and now playing. Requires FM multiplex pipeline (future).">
+                <span class="rds-label">RDS</span>
+                <span class="rds-text" id="rdsText">—</span>
             </div>
 
             <div class="controls">
@@ -462,8 +460,6 @@
         const audioPlayer = document.getElementById('audioPlayer');
         const frequencyDisplay = document.getElementById('frequencyDisplay');
         const frequencyInput = document.getElementById('frequencyInput');
-        const stationNameText = document.getElementById('stationNameText');
-        const stationName = document.getElementById('stationName');
         const playBtn = document.getElementById('playBtn');
         const stopBtn = document.getElementById('stopBtn');
         const volumeSlider = document.getElementById('volumeSlider');
@@ -474,13 +470,6 @@
             await loadStatus();
             await loadPresets();
             await loadConfig();
-            
-            // Set up station name editing
-            stationName.addEventListener('click', () => {
-                if (!stationName.classList.contains('editing')) {
-                    startEditingStationName();
-                }
-            });
 
             // Don't request /api/stream until user clicks Play (avoids 503 retry flood)
 
@@ -530,6 +519,18 @@
                     cpuTemp.textContent = `${status.cpu_temperature}°C`;
                 } else {
                     cpuTemp.textContent = 'N/A';
+                }
+
+                // Update RDS (station name / now playing) when backend provides it
+                const rdsText = document.getElementById('rdsText');
+                if (rdsText) {
+                    const ps = status.rds_ps;
+                    const rt = status.rds_radiotext;
+                    if (ps || rt) {
+                        rdsText.textContent = [ps, rt].filter(Boolean).join('  ·  ');
+                    } else {
+                        rdsText.textContent = '—';
+                    }
                 }
             } catch (error) {
                 console.error('Error loading status:', error);
@@ -828,25 +829,6 @@
             source.src = `${API_BASE}/api/stream?t=${Date.now()}`;
             audioPlayer.load();
             audioPlayer.play().catch(e => console.error('Play error:', e));
-        }
-
-        function startEditingStationName() {
-            stationName.classList.add('editing');
-            const input = document.createElement('input');
-            input.type = 'text';
-            input.value = stationNameText.textContent;
-            input.addEventListener('blur', () => {
-                stationNameText.textContent = input.value;
-                stationName.classList.remove('editing');
-            });
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    input.blur();
-                }
-            });
-            stationName.innerHTML = '';
-            stationName.appendChild(input);
-            input.focus();
         }
 
         // Initialize on load

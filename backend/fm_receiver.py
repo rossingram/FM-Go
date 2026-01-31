@@ -431,7 +431,9 @@ def get_system_status():
         "rtl_sdr_detected": is_rtl_sdr_present(),  # Do NOT use detect_rtl_sdr() here - would open device every 5s
         "is_playing": is_playing,
         "current_frequency": current_frequency,
-        "service_running": True
+        "service_running": True,
+        "rds_ps": None,       # RDS Program Service (station name); set when RDS pipeline is implemented
+        "rds_radiotext": None # RDS Radio Text (e.g. song/artist); set when RDS pipeline is implemented
     }
     
     # Get CPU temperature (Raspberry Pi)

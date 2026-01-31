@@ -38,6 +38,7 @@ Then open **http://\<pi-ip\>:8080** in a browser. Plug in your RTL-SDR and tap *
 - RTL-SDR detection (non-intrusive; device opened only when streaming)
 - Default low gain to avoid overload (e.g. with high-gain antenna)
 - systemd service, starts on boot
+- **RDS** – UI shows station/song info when available; RTL-SDR V4 can receive RDS, but decoding requires an FM multiplex (171 kHz) pipeline (e.g. [redsea](https://github.com/windytan/redsea)); planned for a future update
 
 ## Docs
 
