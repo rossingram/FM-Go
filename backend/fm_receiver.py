@@ -333,14 +333,6 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
         
         logger.info(f"Starting stream at {frequency} Hz ({'AM' if is_am else 'FM'})")
         
-        # Start processes
-        rtl_process = subprocess.Popen(
-            rtl_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0
-        )
-        
         def drain_stderr(proc, name, level='debug'):
             """Drain stderr in background so the pipe doesn't fill and block the process."""
             try:
@@ -354,40 +346,62 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             except Exception:
                 pass
         
-        t_rtl = threading.Thread(target=drain_stderr, args=(rtl_process, 'rtl_fm', 'info'), daemon=True)
-        t_rtl.start()
+        last_error = None
+        for attempt in range(2):
+            # Start processes
+            rtl_process = subprocess.Popen(
+                rtl_cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0
+            )
+            
+            t_rtl = threading.Thread(target=drain_stderr, args=(rtl_process, 'rtl_fm', 'info'), daemon=True)
+            t_rtl.start()
+            
+            sox_process = subprocess.Popen(
+                sox_cmd,
+                stdin=rtl_process.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0
+            )
+            
+            rtl_process.stdout.close()
+            
+            t_sox = threading.Thread(target=drain_stderr, args=(sox_process, 'sox'), daemon=True)
+            t_sox.start()
+            
+            audio_process = subprocess.Popen(
+                ffmpeg_cmd,
+                stdin=sox_process.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                bufsize=0
+            )
+            
+            sox_process.stdout.close()
+            
+            t_ffmpeg = threading.Thread(target=drain_stderr, args=(audio_process, 'ffmpeg'), daemon=True)
+            t_ffmpeg.start()
+            
+            # If rtl_fm exits within 1s (e.g. usb_claim_interface -6), clean up and retry once
+            time.sleep(1.0)
+            if rtl_process.poll() is None:
+                global _stream_died_logged
+                _stream_died_logged = False
+                is_playing = True
+                logger.info("Stream started successfully")
+                return True
+            
+            last_error = "rtl_fm exited shortly after start (device may be in use or not released yet)"
+            logger.warning("%s; attempt %d/2, retrying after delay...", last_error, attempt + 1)
+            stop_streaming()
+            if attempt == 0:
+                time.sleep(2.5)
         
-        sox_process = subprocess.Popen(
-            sox_cmd,
-            stdin=rtl_process.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0
-        )
-        
-        rtl_process.stdout.close()
-        
-        t_sox = threading.Thread(target=drain_stderr, args=(sox_process, 'sox'), daemon=True)
-        t_sox.start()
-        
-        audio_process = subprocess.Popen(
-            ffmpeg_cmd,
-            stdin=sox_process.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0
-        )
-        
-        sox_process.stdout.close()
-        
-        t_ffmpeg = threading.Thread(target=drain_stderr, args=(audio_process, 'ffmpeg'), daemon=True)
-        t_ffmpeg.start()
-        
-        global _stream_died_logged
-        _stream_died_logged = False
-        is_playing = True
-        logger.info("Stream started successfully")
-        return True
+        logger.error("Failed to start stream after 2 attempts. %s", last_error or "unknown")
+        return False
         
     except Exception as e:
         logger.error(f"Error starting stream: {e}")

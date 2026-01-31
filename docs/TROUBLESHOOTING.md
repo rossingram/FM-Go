@@ -13,6 +13,15 @@
   sudo reboot
   ```
 
+## "usb_claim_interface error -6" / "Failed to open rtlsdr device"
+
+This usually means the device is still held by a previous process or the kernel. The service now **retries once** after a short delay. If it still fails:
+
+- **Wait 5–10 seconds** after stopping the stream, then try Play again.
+- **Restart the service** to release the device: `sudo systemctl restart fm-go.service`
+- **Unplug and replug** the RTL-SDR, then try again.
+- Ensure no other program is using the SDR (e.g. GQRX, SDR#, or another `rtl_fm`/`rtl_test` process).
+
 ## RTL-SDR drops offline when you tap Play
 
 If the SDR shows **✅ Detected** but **disconnects as soon as you hit Play**, the device is dropping when we open it for streaming. Software already keeps load low (one open, gain 0, 170k sample rate); the cause is usually **hardware or USB**.
