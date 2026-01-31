@@ -325,10 +325,15 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             '-b', '16',
             '-e', 'signed-integer',
             '-',  # stdin
+        ]
+        # AM from direct sampling is often very quiet; boost so it's audible in the browser
+        if is_am:
+            sox_cmd.extend(['gain', '15'])  # +15 dB
+        sox_cmd.extend([
             '-t', 'wav',
             '-r', pipeline_rate,  # 48k WAV so MP3 is 48k (AM: sox resamples 24k->48k)
             '-'   # stdout
-        ]
+        ])
         
         ffmpeg_cmd = [
             'ffmpeg',
