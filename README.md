@@ -4,6 +4,8 @@ A plug-and-play Raspberry Pi FM radio receiver. Turn a Pi into a headless, alway
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+![FM-Go web interface](docs/screenshot.png)
+
 ## Quick Start
 
 **One-command install:**
