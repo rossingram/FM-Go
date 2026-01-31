@@ -284,27 +284,28 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             # so we request (freq - offset) so the actual tuned frequency is correct.
             AM_DIRECT_OFFSET_HZ = 264000
             rtl_freq = max(0, frequency - AM_DIRECT_OFFSET_HZ)
-            audio_rate = '24000'
+            rtl_output_rate = '24000'  # rtl_fm output; sox will resample to 48k for pipeline
             rtl_cmd = [
                 'rtl_fm',
                 '-f', str(rtl_freq),
                 '-s', '24000',   # Device sample rate (must be supported; 24k is default/valid)
                 '-M', 'am',
-                '-r', audio_rate,
+                '-r', rtl_output_rate,
                 '-E', 'direct',  # Tune AM band (530-1700 kHz)
                 '-E', 'edge',    # Lower edge tuning for direct sampling
+                '-E', 'dc',      # DC blocking filter (often needed for AM to avoid silent/muted audio)
                 '-A', 'fast',
             ]
             logger.info(f"Starting AM stream at {frequency} Hz ({frequency/1000:.0f} kHz) (rtl_fm -f {rtl_freq})")
         else:
-            audio_rate = '48000'
+            rtl_output_rate = '48000'
             # FM broadcast
             rtl_cmd = [
                 'rtl_fm',
                 '-f', str(frequency),
                 '-s', str(sample_rate),
                 '-M', 'wfm',
-                '-r', audio_rate,
+                '-r', rtl_output_rate,
                 '-A', 'fast',
             ]
         
@@ -313,17 +314,19 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
         else:
             rtl_cmd.extend(['-g', str(gain)])
         
-        # Build audio encoding pipeline
-        # rtl_fm -> sox (convert to WAV) -> ffmpeg (encode to MP3)
+        # Pipeline output is always 48k (browser/MP3); AM uses 24k from rtl_fm, so sox resamples
+        pipeline_rate = '48000'
+        # Build audio encoding pipeline: rtl_fm -> sox (raw to WAV, optionally resample) -> ffmpeg (MP3)
         sox_cmd = [
             'sox',
             '-t', 'raw',
-            '-r', audio_rate,
+            '-r', rtl_output_rate,
             '-c', '1',
             '-b', '16',
             '-e', 'signed-integer',
             '-',  # stdin
             '-t', 'wav',
+            '-r', pipeline_rate,  # 48k WAV so MP3 is 48k (AM: sox resamples 24k->48k)
             '-'   # stdout
         ]
         
@@ -406,7 +409,7 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             logger.warning("%s; attempt %d/2, retrying after delay...", last_error, attempt + 1)
             stop_streaming()
             if attempt == 0:
-                time.sleep(2.5)
+                time.sleep(4.0)  # Give USB more time to release before retry
         
         logger.error("Failed to start stream after 2 attempts. %s", last_error or "unknown")
         return False
