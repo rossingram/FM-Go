@@ -398,8 +398,9 @@
 
             <div class="tune-control">
                 <label>Frequency (Hz):</label>
-                <input type="number" id="frequencyInput" min="87500000" max="108000000" step="100000" value="101500000">
+                <input type="number" id="frequencyInput" min="530000" max="108000000" step="1000" value="101500000" placeholder="AM 530k–1.7M, FM 87.5M–108M">
                 <button class="btn btn-primary" onclick="tune()">Tune</button>
+                <p style="font-size: 0.85em; color: #666; margin-top: 6px;">AM: 530000–1700000 (kHz). FM: 87500000–108000000 (MHz).</p>
             </div>
 
             <div class="volume-control">
@@ -437,7 +438,7 @@
 
             <div class="add-preset-form">
                 <input type="text" id="newPresetName" placeholder="Station Name">
-                <input type="number" id="newPresetFreq" placeholder="Frequency (Hz)" min="87500000" max="108000000" step="100000">
+                <input type="number" id="newPresetFreq" placeholder="Frequency (Hz)" min="530000" max="108000000" step="1000">
                 <button class="btn btn-primary" onclick="addPreset()" style="width: 100%; margin-top: 10px;">
                     ➕ Add Preset
                 </button>
@@ -675,10 +676,14 @@
             }
         }
 
+        function isValidFrequency(hz) {
+            return (hz >= 530000 && hz <= 1700000) || (hz >= 87500000 && hz <= 108000000);
+        }
+
         async function tune() {
             const frequency = parseInt(frequencyInput.value);
-            if (frequency < 87500000 || frequency > 108000000) {
-                alert('Frequency must be between 87.5 MHz and 108 MHz');
+            if (!frequency || !isValidFrequency(frequency)) {
+                alert('Use AM 530–1700 kHz (530000–1700000) or FM 87.5–108 MHz (87500000–108000000)');
                 return;
             }
             
@@ -733,8 +738,8 @@
                 return;
             }
             
-            if (!freq || freq < 87500000 || freq > 108000000) {
-                alert('Please enter a valid frequency (87.5-108 MHz)');
+            if (!freq || !isValidFrequency(freq)) {
+                alert('Use AM 530–1700 kHz or FM 87.5–108 MHz');
                 return;
             }
             
@@ -808,7 +813,10 @@
         }
 
         function formatFrequency(hz) {
-            return (hz / 1000000).toFixed(1) + ' MHz';
+            if (hz >= 530000 && hz <= 1700000) {
+                return (hz / 1000).toFixed(0) + ' kHz (AM)';
+            }
+            return (hz / 1000000).toFixed(1) + ' MHz (FM)';
         }
 
         function updateAudioSource() {

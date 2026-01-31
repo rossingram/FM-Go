@@ -34,6 +34,7 @@ Then open **http://\<pi-ip\>:8080** in a browser. Plug in your RTL-SDR and tap *
 
 - One-command installation
 - Web UI: play/pause, volume, frequency, presets
+- **FM** (87.5–108 MHz) and **AM** (530–1700 kHz) broadcast
 - RTL-SDR detection (non-intrusive; device opened only when streaming)
 - Default low gain to avoid overload (e.g. with high-gain antenna)
 - systemd service, starts on boot

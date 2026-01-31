@@ -240,12 +240,13 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
     if frequency is None:
         frequency = config.get('frequency', 101500000)
     
-    # Validate frequency range (FM broadcast band: 87.5-108 MHz)
-    if frequency < 87500000 or frequency > 108000000:
-        logger.error(f"Frequency {frequency} out of valid FM range (87.5-108 MHz)")
+    # Validate frequency range: FM 87.5-108 MHz, AM 530-1700 kHz
+    if not (530000 <= frequency <= 1700000 or 87500000 <= frequency <= 108000000):
+        logger.error(f"Frequency {frequency} out of valid range (AM 530-1700 kHz, FM 87.5-108 MHz)")
         return False
     
     current_frequency = frequency
+    is_am = 530000 <= frequency <= 1700000
     
     if is_playing:
         stop_streaming(timeout=2 if is_retune else 5)
@@ -274,21 +275,34 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
                 gain = 0
             _first_stream_this_session = False
         
-        # Build rtl_fm command
-        # Use explicit gain by default to prevent overload (strong signal / high-gain antenna)
-        rtl_cmd = [
-            'rtl_fm',
-            '-f', str(frequency),
-            '-s', str(sample_rate),
-            '-M', 'wfm',  # Wideband FM
-            '-r', '48000',  # Audio sample rate
-            '-A', 'fast',  # Fast AGC
-        ]
+        # Build rtl_fm command (FM 87.5-108 MHz or AM 530-1700 kHz)
+        audio_rate = '48000'
+        if is_am:
+            # AM broadcast: direct sampling for < 24 MHz, 48k sample/audio rate
+            rtl_cmd = [
+                'rtl_fm',
+                '-f', str(frequency),
+                '-s', '48000',
+                '-M', 'am',
+                '-r', audio_rate,
+                '-E', 'direct',  # Tune AM band (530-1700 kHz)
+                '-A', 'fast',
+            ]
+            logger.info(f"Starting AM stream at {frequency} Hz ({frequency/1000:.0f} kHz)")
+        else:
+            # FM broadcast
+            rtl_cmd = [
+                'rtl_fm',
+                '-f', str(frequency),
+                '-s', str(sample_rate),
+                '-M', 'wfm',
+                '-r', audio_rate,
+                '-A', 'fast',
+            ]
         
         if gain == 'auto' or gain is None:
-            rtl_cmd.append('-T')  # Enable AGC (use only if no overload)
+            rtl_cmd.append('-T')  # Enable AGC
         else:
-            # Explicit gain in dB - lower values prevent overload
             rtl_cmd.extend(['-g', str(gain)])
         
         # Build audio encoding pipeline
@@ -296,13 +310,13 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
         sox_cmd = [
             'sox',
             '-t', 'raw',
-            '-r', '48000',
+            '-r', audio_rate,
             '-c', '1',
             '-b', '16',
             '-e', 'signed-integer',
             '-',  # stdin
             '-t', 'wav',
-            '-'  # stdout
+            '-'   # stdout
         ]
         
         ffmpeg_cmd = [
@@ -317,7 +331,7 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             '-'  # stdout
         ]
         
-        logger.info(f"Starting stream at {frequency} Hz")
+        logger.info(f"Starting stream at {frequency} Hz ({'AM' if is_am else 'FM'})")
         
         # Start processes
         rtl_process = subprocess.Popen(
@@ -519,8 +533,8 @@ def api_tune():
             return jsonify({"success": False, "error": "Missing frequency"}), 400
         
         frequency = int(data['frequency'])
-        if frequency < 87500000 or frequency > 108000000:
-            return jsonify({"success": False, "error": "Frequency must be 87.5–108 MHz"}), 400
+        if not (530000 <= frequency <= 1700000 or 87500000 <= frequency <= 108000000):
+            return jsonify({"success": False, "error": "Use AM 530–1700 kHz or FM 87.5–108 MHz"}), 400
         
         if start_streaming(frequency, is_retune=is_playing):
             config['frequency'] = frequency
