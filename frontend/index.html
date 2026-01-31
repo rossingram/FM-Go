@@ -399,7 +399,7 @@
             <div class="tune-control">
                 <label>Frequency (Hz):</label>
                 <input type="number" id="frequencyInput" min="530000" max="108000000" step="1000" value="101500000" placeholder="AM 530k–1.7M, FM 87.5M–108M">
-                <button class="btn btn-primary" onclick="tune()">Tune</button>
+                <button class="btn btn-primary" id="tuneBtn" onclick="tune()">Tune</button>
                 <p style="font-size: 0.85em; color: #666; margin-top: 6px;">AM: 530000–1700000 (kHz). FM: 87500000–108000000 (MHz).</p>
             </div>
 
@@ -691,7 +691,15 @@
             await tuneToFrequency(frequency);
         }
 
+        let tuneInProgress = false;
+
         async function tuneToFrequency(frequency) {
+            if (tuneInProgress) return;
+            tuneInProgress = true;
+            const tuneBtn = document.getElementById('tuneBtn');
+            const origTuneText = tuneBtn ? tuneBtn.textContent : 'Tune';
+            if (tuneBtn) tuneBtn.disabled = true;
+            if (tuneBtn) tuneBtn.textContent = 'Tuning…';
             try {
                 const response = await fetch(`${API_BASE}/api/tune`, {
                     method: 'POST',
@@ -713,6 +721,8 @@
                     frequencyInput.value = frequency;
                     await loadPresets();
                     if (isPlaying) {
+                        // Brief delay so backend stream is ready, then refresh stream URL so browser requests it
+                        await new Promise(r => setTimeout(r, 500));
                         updateAudioSource();
                     }
                 } else {
@@ -721,6 +731,10 @@
             } catch (error) {
                 console.error('Error tuning:', error);
                 alert('Failed to tune: ' + error.message);
+            } finally {
+                tuneInProgress = false;
+                if (tuneBtn) tuneBtn.disabled = false;
+                if (tuneBtn) tuneBtn.textContent = origTuneText;
             }
         }
 
@@ -820,8 +834,10 @@
         }
 
         function updateAudioSource() {
-            // Add timestamp to prevent caching
             const source = document.getElementById('audioSource');
+            // Clear then set URL so the browser always issues a new stream request (avoids stale/cached)
+            source.src = '';
+            audioPlayer.load();
             source.src = `${API_BASE}/api/stream?t=${Date.now()}`;
             audioPlayer.load();
             audioPlayer.play().catch(e => console.error('Play error:', e));
