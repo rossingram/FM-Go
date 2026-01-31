@@ -381,7 +381,7 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             
             rtl_proc.stdout.close()
             
-            t_sox = threading.Thread(target=drain_stderr, args=(sox_process, 'sox'), daemon=True)
+            t_sox = threading.Thread(target=drain_stderr, args=(sox_process, 'sox', 'info'), daemon=True)
             t_sox.start()
             
             audio_process = subprocess.Popen(
@@ -394,7 +394,7 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             
             sox_process.stdout.close()
             
-            t_ffmpeg = threading.Thread(target=drain_stderr, args=(audio_process, 'ffmpeg'), daemon=True)
+            t_ffmpeg = threading.Thread(target=drain_stderr, args=(audio_process, 'ffmpeg', 'info'), daemon=True)
             t_ffmpeg.start()
             
             # If rtl_fm exits within 1s (e.g. usb_claim_interface -6), clean up and retry once
