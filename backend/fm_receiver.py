@@ -317,6 +317,7 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
         # Pipeline output is always 48k (browser/MP3); AM uses 24k from rtl_fm, so sox resamples
         pipeline_rate = '48000'
         # Build audio encoding pipeline: rtl_fm -> sox (raw to WAV, optionally resample) -> ffmpeg (MP3)
+        # SoX order: input [opts] output [opts] [effect ...] (effects come after output file)
         sox_cmd = [
             'sox',
             '-t', 'raw',
@@ -325,15 +326,13 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             '-b', '16',
             '-e', 'signed-integer',
             '-',  # stdin
-        ]
-        # AM from direct sampling is often very quiet; boost so it's audible in the browser
-        if is_am:
-            sox_cmd.extend(['gain', '15'])  # +15 dB
-        sox_cmd.extend([
             '-t', 'wav',
             '-r', pipeline_rate,  # 48k WAV so MP3 is 48k (AM: sox resamples 24k->48k)
             '-'   # stdout
-        ])
+        ]
+        # AM from direct sampling is often very quiet; boost so it's audible (effect after output)
+        if is_am:
+            sox_cmd.extend(['gain', '15'])  # +15 dB
         
         ffmpeg_cmd = [
             'ffmpeg',
