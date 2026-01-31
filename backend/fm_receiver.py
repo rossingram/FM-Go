@@ -359,26 +359,27 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
         
         last_error = None
         for attempt in range(2):
-            # Start processes
-            rtl_process = subprocess.Popen(
+            # Start processes (use local ref for poll check so concurrent api_stop can't set global to None)
+            rtl_proc = subprocess.Popen(
                 rtl_cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=0
             )
+            rtl_process = rtl_proc  # global for stop_streaming / drain threads
             
-            t_rtl = threading.Thread(target=drain_stderr, args=(rtl_process, 'rtl_fm', 'info'), daemon=True)
+            t_rtl = threading.Thread(target=drain_stderr, args=(rtl_proc, 'rtl_fm', 'info'), daemon=True)
             t_rtl.start()
             
             sox_process = subprocess.Popen(
                 sox_cmd,
-                stdin=rtl_process.stdout,
+                stdin=rtl_proc.stdout,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 bufsize=0
             )
             
-            rtl_process.stdout.close()
+            rtl_proc.stdout.close()
             
             t_sox = threading.Thread(target=drain_stderr, args=(sox_process, 'sox'), daemon=True)
             t_sox.start()
@@ -398,7 +399,7 @@ def start_streaming(frequency=None, gain_override=None, is_retune=False):
             
             # If rtl_fm exits within 1s (e.g. usb_claim_interface -6), clean up and retry once
             time.sleep(1.0)
-            if rtl_process.poll() is None:
+            if rtl_proc.poll() is None:
                 global _stream_died_logged
                 _stream_died_logged = False
                 is_playing = True
